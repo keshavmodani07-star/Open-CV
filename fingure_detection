@@ -1,0 +1,65 @@
+import cv2
+import mediapipe as mp
+
+# Initialize MediaPipe Hands
+mp_hands = mp.solutions.hands
+mp_draw = mp.solutions.drawing_utils
+hands = mp_hands.Hands(max_num_hands=1, min_detection_confidence=0.7)
+
+# Finger landmark IDs (tip points)
+INDEX_FINGER_TIP = 8
+MIDDLE_FINGER_TIP = 12
+RING_FINGER_TIP = 16
+
+def detect_gesture(landmarks):
+    fingers_up = 0
+
+    # Check if Index is raised
+    if landmarks[INDEX_FINGER_TIP].y < landmarks[INDEX_FINGER_TIP - 2].y:
+        fingers_up += 1
+
+    # Check if Middle is raised
+    if landmarks[MIDDLE_FINGER_TIP].y < landmarks[MIDDLE_FINGER_TIP - 2].y:
+        fingers_up += 1
+
+    # Check if Ring is raised
+    if landmarks[RING_FINGER_TIP].y < landmarks[RING_FINGER_TIP - 2].y:
+        fingers_up += 1
+
+    # Map number of raised fingers to colors
+    if fingers_up == 1:
+        return "RED"
+    elif fingers_up == 2:
+        return "YELLOW"
+    elif fingers_up == 3:
+        return "GREEN"
+    else:
+        return None
+
+# Open webcam
+cap = cv2.VideoCapture(0)
+
+while True:
+    success, img = cap.read()
+    if not success:
+        break
+
+    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    results = hands.process(img_rgb)
+
+    if results.multi_hand_landmarks:
+        for hand_landmarks in results.multi_hand_landmarks:
+            mp_draw.draw_landmarks(img, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+            
+            # Detect gesture
+            gesture = detect_gesture(hand_landmarks.landmark)
+            if gesture:
+                print("Gesture Detected:", gesture)
+
+    cv2.imshow("Hand Tracking", img)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
+
